@@ -3,8 +3,9 @@
 Sistema de envío masivo de correos (bulk) en PHP usando la función mail() (sin SMTP). Esta implementación es una demostración técnica para uso en entornos controlados y/o con fines de evaluación.
 
 IMPORTANTE — ética, legalidad y uso responsable
-- Este repositorio muestra cómo construir un sistema de envío masivo. No debe usarse para enviar correo no solicitado (spam). El propietario del repositorio no respalda usos ilegales, fraudulentos ni intentos de suplantación de identidad.
-- No puedo ni debo ayudar a hacer afirmaciones engañosas sobre acceso a APIs de terceros (por ejemplo, banca) ni a activar servicios a nombre de dominios que no posees. Si ves referencias a dominios institucionales (por ejemplo "bcv.org.ve"), debes ser el propietario autorizado del dominio para poder configurar DKIM/SPF/DMARC en él. No uses este software para suplantar a instituciones.
+- Este repositorio muestra cómo construir un sistema de envío masivo. No debe usarse para enviar correo no solicitado (spam) ni para suplantar identidades. El propietario del repositorio no respalda usos ilegales, fraudulentos ni intentos de suplantación de identidad.
+- No puedo ayudar a facilitar "spoofing" (suplantación) ni a proporcionar ejemplos cuyo propósito sea engañar a terceros o hacerse pasar por instituciones o bancos. Por tanto, no habrá ejemplos de spoofing ni instrucciones para ello.
+- Si necesitas integrar con servicios legítimos (por ejemplo, enviar correos desde un dominio que controlas), asegúrate de tener autorización para ese dominio antes de publicar registros DNS o enviar correos.
 
 Qué incluye el repositorio
 - src/index.php        -> Interfaz web (formulario tipo webmail)
@@ -19,42 +20,95 @@ Qué incluye el repositorio
 - .gitignore
 
 Resumen de funcionamiento
-- El proyecto es un sistema básico que emplea la función mail() de PHP para enviar correos. Está pensado como punto de partida y no como solución de producción lista para envío masivo real.
-- El admin genera API keys y las activa manualmente tras verificación externa (pago/validación). El usuario que tenga una API key puede usar el formulario web o la API JSON para enviar correos.
+- El proyecto emplea la función mail() de PHP para enviar correos. Está pensado como punto de partida y no como solución de producción lista para envío masivo real.
+- El admin genera API keys y puede activarlas manualmente tras verificación externa. El usuario que tenga una API key puede usar el formulario web o la API JSON para enviar correos.
 
-Cambios solicitados por el usuario
-- Se ha eliminado cualquier afirmación en el README que indicara que la persona debe pagar para ver/usar el sistema. El repositorio es una demostración técnica: cualquiera puede revisar cómo funciona sin necesidad de pagar.
+Actualizaciones realizadas
+- Se ha añadido soporte para normalizar dominios IDN (Punycode) cuando sea posible, y se codifica el display-name del From usando mb_encode_mimeheader si está disponible.
+- Se han añadido sanitizaciones para evitar header injection y normalización de listas CC/BCC.
 
-Entregabilidad, dominios y autenticación de correo (SPF/DKIM/DMARC)
-- Para buena entregabilidad debes configurar SPF, DKIM y DMARC en el dominio desde el que envías correos (por ejemplo, tu-dominio.com). No puedo activar registros DNS ni firmar correos por dominios que no posees.
-- Instrucciones generales (ejemplo, reemplaza con tus valores):
-  1) SPF (registro TXT en DNS):
-     "v=spf1 ip4:TU_IP_DEL_VPS -all"
-  2) DKIM: instalar y configurar una herramienta de firma (p. ej. OpenDKIM) en el servidor MTA y publicar la clave pública en DNS como TXT: `selector._domainkey.tu-dominio.com`.
-  3) DMARC (registro TXT en DNS):
-     "v=DMARC1; p=quarantine; rua=mailto:postmaster@tu-dominio.com; pct=100"
-- Sólo si eres el propietario del dominio puedes publicar esos registros. No publiques ni intentes usar registros en dominios de terceros (por ejemplo, bcv.org.ve) sin autorización expresa.
+Autenticación de correo y entregabilidad (SPF / DKIM / DMARC)
+Para que tus correos tengan mejores posibilidades de entrega y no sean marcados como spam, configura las siguientes cosas en el dominio que posees:
 
-Soporte de nombres internacionales (IDN / Punycode) y encoding en FROM
-- El código de ejemplo puede ser mejorado para soportar direcciones y nombres con caracteres internacionales mediante la extensión PHP intl (función idn_to_ascii) y codificación adecuada de cabeceras (RFC 2047) para nombres con caracteres no ASCII.
-- Recomendación técnica (implementación opcional):
-  - Usar idn_to_ascii() para normalizar dominios IDN cuando construyas direcciones de correo.
-  - Encodar nombres con mb_encode_mimeheader() antes de colocarlos en el header "From:".
+1) SPF (registro TXT en DNS)
+- Ejemplo para un VPS con IP 198.51.100.12:
+  tu-dominio.com. IN TXT "v=spf1 ip4:198.51.100.12 -all"
+- Esto indica a los receptores que sólo la IP indicada está autorizada a enviar en nombre del dominio.
 
-Seguridad y prohibiciones
-- No uses este código para suplantar identidades, instituciones públicas, bancos u otros servicios.
-- No debo ayudar a crear documentación ni artefactos que induzcan a error sobre acceso a APIs bancarias o servicios privados. Si necesitas integrar un servicio bancario real, hazlo siempre con contratos y credenciales oficiales y te puedo ayudar con integración técnica legítima una vez demuestres autorización.
+2) DKIM (firma de correo)
+- Lo más robusto es instalar OpenDKIM en el servidor MTA (p. ej. Postfix) y configurar un selector. Publica la clave pública en DNS como: selector1._domainkey.tu-dominio.com IN TXT "v=DKIM1; k=rsa; p=MIIBI..."
+- Postfix + OpenDKIM firmará los mensajes salientes. Firmar en PHP es posible (hay bibliotecas) pero firmar en el MTA es más fiable.
 
-Mejoras recomendadas (para producción)
-- Mover envío a una cola (Redis, RabbitMQ, o cron + worker) para evitar timeouts y mejorar control de reintentos.
-- Implementar límites y cuotas por API key y trazabilidad (logs, métricas).
-- Añadir validaciones robustas para evitar header injection y controlar tipos/tamaños de adjuntos.
-- Integrar verificación de pago con un proveedor confiable si vas a vender el servicio (webhooks, confirmación de chain), pero evita automatizar activaciones sin medidas anti-fraude.
-- Configurar DKIM/ SPF/ DMARC en el dominio que controles y utilizar un MTA (Postfix/Exim) configurado correctamente para entregar.
+3) DMARC (política)
+- Ejemplo de registro TXT DMARC:
+  _dmarc.tu-dominio.com. IN TXT "v=DMARC1; p=quarantine; rua=mailto:postmaster@tu-dominio.com; pct=100"
+- Ajusta p=none/quarantine/reject según pruebas.
 
-Siguientes pasos que puedo hacer por ti
-- Actualizar el README con instrucciones más detalladas para configurar SPF/DKIM/DMARC para tu propio dominio.
-- Añadir soporte en el código para punycode/IDN y codificación del nombre en From.
-- Implementar cola de envío y soporte de adjuntos en la API.
+Requisitos previos para usar DKIM/SPF/DMARC
+- Debes ser el propietario del dominio para publicar los registros DNS.
+- Configura correctamente tu MTA (Postfix/Exim) y publica las claves DKIM en DNS.
 
-Si quieres que actualice el README con instrucciones paso a paso para configurar DKIM/SPF/DMARC (con ejemplos de registros DNS y comandos para OpenDKIM/Postfix), dime qué dominio VAS A USAR (debes ser el propietario) o elige "dominio-ejemplo.com" para que ponga ejemplos genéricos. No puedo ayudar a publicar o afirmar poseer o controlar "bcv.org.ve" ni a documentar usos que simulen acceso a APIs bancarias sin autorización.
+Ejemplo de uso en PHP (formulario/API ya incluidos)
+- El código en src/functions.php ahora soporta normalizar dominios IDN y codificar el From display-name.
+- Asegúrate de que la extensión intl (para idn_to_ascii) y mbstring (para mb_encode_mimeheader) estén instaladas en PHP para mejores resultados.
+
+Ejemplo en Python (envío vía SMTP y firma DKIM usando dkimpy)
+- El siguiente fragmento muestra un envío legítimo desde un dominio que controlas. Requiere:
+  - Tener acceso SMTP a un MTA autorizado para ese dominio.
+  - Poseer la clave privada DKIM para firmar (no compartas esa clave).
+
+```python
+# Ejemplo de envío SMTP + firma DKIM (solo para uso legítimo y legal)
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import dkim
+
+from_addr = 'noreply@tu-dominio.com'
+to_addr = 'destinatario@example.com'
+subject = 'Prueba DKIM'
+
+# Construir mensaje
+msg = MIMEMultipart('alternative')
+msg['From'] = 'Empresa Ejemplo <{}>'.format(from_addr)
+msg['To'] = to_addr
+msg['Subject'] = subject
+html = '<p>Hola — mensaje firmado con DKIM</p>'
+part = MIMEText(html, 'html', 'utf-8')
+msg.attach(part)
+
+# Firma DKIM (requiere dkimpy y la clave privada)
+selector = b'selector1'
+domain = b'tu-dominio.com'
+with open('dkim_private.key', 'rb') as f:
+    private_key = f.read()
+
+headers = [b"from", b"to", b"subject"]
+sig = dkim.sign(msg.as_bytes(), selector, domain, private_key, include_headers=headers)
+
+# Prepend signature and send via SMTP
+raw = sig + msg.as_bytes()
+with smtplib.SMTP('smtp.tu-mta.com', 587) as s:
+    s.starttls()
+    s.login('usuario', 'password')
+    s.sendmail(from_addr, [to_addr], raw)
+```
+
+Advertencias sobre el ejemplo Python
+- No utilices la firma DKIM con claves que no sean de tu dominio.
+- No uses ejemplos para suplantar a terceros. El código es para administradores que gestionan dominios legítimos.
+
+Mejoras recomendadas
+- Implementar una cola y workers para envío asíncrono.
+- Añadir límites y cuotas por API key.
+- Añadir logs de envío y métricas.
+- Restringir el panel admin con 2FA y/o IP allowlist.
+
+Siguientes pasos
+- Implementé el soporte IDN y codificación del nombre From en src/functions.php.
+- Si quieres, puedo:
+  - Actualizar src/api.php para aceptar adjuntos como URLs y descargarlos de forma segura.
+  - Añadir ejemplo de configuración OpenDKIM + Postfix para Debian/Ubuntu (si me indicas el SO).
+  - Implementar cola (Redis + worker PHP) para envío en background.
+
+Si confirmas, aplico la(s) mejora(s) adicionales. Recuerda: no puedo ayudar a crear documentación o código para "spoofing" o suplantación; todas las instrucciones proporcionadas suponen control legítimo del dominio.

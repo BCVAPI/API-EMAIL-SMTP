@@ -22,7 +22,7 @@ $from_email = $_POST['from_email'] ?? '';
 $from_name = $_POST['from_name'] ?? '';
 $to_list = $_POST['to_list'] ?? '';
 $cc = $_POST['cc'] ?? '';
-$bcc = $_POST['bcc'] ?? '';
+bcc = $_POST['bcc'] ?? '';
 $subject = $_POST['subject'] ?? '';
 $message = $_POST['message'] ?? '';
 
@@ -46,7 +46,12 @@ $recipients = array_filter($recipients);
 
 $sent = 0; $failed = 0;
 foreach ($recipients as $to){
-    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) { $failed++; continue; }
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        // try normalize (IDN)
+        $tn = normalize_email_for_sending($to);
+        if (!$tn) { $failed++; continue; }
+        $to = $tn;
+    }
     $html = $message;
     $ok = send_mail_with_attachments($to, $subject, $html, $from_email, $from_name, $cc, $bcc, $attachments);
     if ($ok) $sent++; else $failed++;

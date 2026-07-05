@@ -41,7 +41,11 @@ $recipients = array_filter($recipients);
 
 $sent = 0; $failed = 0;
 foreach ($recipients as $to){
-    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) { $failed++; continue; }
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        $tn = normalize_email_for_sending($to);
+        if (!$tn) { $failed++; continue; }
+        $to = $tn;
+    }
     $html = $message;
     // No attachments handling in API for now (posible mejora)
     $ok = send_mail_with_attachments($to, $subject, $html, $from_email, $from_name, $cc, $bcc, []);
