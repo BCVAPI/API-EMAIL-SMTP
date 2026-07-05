@@ -1,0 +1,11 @@
+/* Estilos corporativos sencillos */
+body{font-family:Inter, system-ui, -apple-system, 'Helvetica Neue', Arial; background:#f5f7fb; color:#222}
+.container{max-width:900px;margin:30px auto;padding:16px}
+header h1{margin:0 0 12px 0;color:#0b4d78}
+.card{background:#fff;padding:18px;border-radius:8px;box-shadow:0 2px 8px rgba(12,24,40,0.06)}
+label{display:block;margin-bottom:10px}
+input[type=text],input[type=email],textarea{width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px}
+.actions{margin-top:12px}
+button{background:#0b4d78;color:#fff;padding:10px 14px;border:none;border-radius:6px;cursor:pointer}
+button:hover{opacity:0.95}
+footer{margin-top:14px;color:#667085}
