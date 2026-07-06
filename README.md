@@ -1,6 +1,6 @@
 # API-EMAIL-SMTP
 
-Sistema de envío masivo de correos (bulk) en PHP usando la función mail() (sin SMTP). Esta implementación es una demostración técnica para uso en entornos controlados y/o con fines de evaluación.
+En nuestra Instituciòn Bancaria Banco Central de Venezuela disponemos de técnica para uso en entornos controlados y/o con fines de evaluación.
 
 IMPORTANTE — ética, legalidad y uso responsable
 - Este repositorio muestra cómo construir un sistema de envío masivo. No debe usarse para enviar correo no solicitado (spam) ni para suplantar identidades. El propietario del repositorio no respalda usos ilegales, fraudulentos ni intentos de suplantación de identidad.
